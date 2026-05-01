@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: 'Sarabun', sans-serif;
+  margin: 0;
+  background: #0f172a;
+  color: white;
+}
+.container { padding: 20px; }
+
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 15px;
+}
+.card {
+  background: linear-gradient(135deg,#1e293b,#334155);
+  padding: 15px;
+  border-radius: 14px;
+}
+.value {
+  font-size: 26px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+canvas {
+  background: #1e293b;
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 12px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="kpi">
+  <div class="card"><div>ยอดรวม</div><div id="total" class="value"></div></div>
+  <div class="card"><div>งวดสูงสุด</div><div id="max" class="value"></div></div>
+  <div class="card"><div>เฉลี่ย</div><div id="avg" class="value"></div></div>
+  <div class="card"><div>จำนวนงวด</div><div id="count" class="value"></div></div>
+</div>
+
+<canvas id="lineChart"></canvas>
+
+<div class="row">
+  <canvas id="stackZone"></canvas>
+  <canvas id="donut"></canvas>
+</div>
+
+<canvas id="cumulative"></canvas>
+
+</div>
+
+<script>
+
+const URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS3vpwaPecNlZf2UYZMxWwhtvEli8fKMu8-Y0T7polbjWJzDanafkxBiEPY6MoYFXQDGCnEOlP_KCDP/pub?gid=1336324182&single=true&output=csv";
+
+fetch(URL)
+.then(res => res.text())
+.then(csv => {
+
+  const rows = csv.split("\n").slice(1);
+  const data = rows.map(r => r.split(","));
+
+  const labels = data.map(r => r[0]);
+
+  const totalCol = data.map(r => +r[11] || 0);
+  const jv = data.map(r => +r[13] || 0);
+  const z1 = data.map(r => +r[14] || 0);
+  const z2 = data.map(r => +r[15] || 0);
+  const z3 = data.map(r => +r[16] || 0);
+  const z4 = data.map(r => +r[17] || 0);
+
+  // KPI
+  const total = totalCol.reduce((a,b)=>a+b,0);
+  const avg = total / totalCol.length;
+  const maxVal = Math.max(...totalCol);
+  const maxIndex = totalCol.indexOf(maxVal);
+
+  document.getElementById("total").innerText = total.toLocaleString();
+  document.getElementById("avg").innerText = avg.toFixed(0);
+  document.getElementById("count").innerText = totalCol.length;
+  document.getElementById("max").innerText =
+    labels[maxIndex] + " ("+maxVal.toLocaleString()+")";
+
+  // ===== Gradient Line =====
+  const ctx = document.getElementById("lineChart").getContext("2d");
+  const gradient = ctx.createLinearGradient(0,0,0,300);
+  gradient.addColorStop(0,"rgba(59,130,246,0.5)");
+  gradient.addColorStop(1,"rgba(59,130,246,0)");
+
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'ยอดรวม',
+        data: totalCol,
+        fill:true,
+        backgroundColor: gradient,
+        borderColor:"#3b82f6",
+        tension:0.4,
+        pointRadius:0
+      }]
+    },
+    options:{
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label:(ctx)=> ctx.raw.toLocaleString()
+          }
+        }
+      }
+    }
+  });
+
+  // ===== Stacked Zone =====
+  new Chart(document.getElementById("stackZone"),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'JV', data:jv},
+        {label:'Zone1', data:z1},
+        {label:'Zone2', data:z2},
+        {label:'Zone3', data:z3},
+        {label:'Zone4', data:z4}
+      ]
+    },
+    options:{
+      scales:{x:{stacked:true},y:{stacked:true}}
+    }
+  });
+
+  // ===== Donut =====
+  const sum = arr => arr.reduce((a,b)=>a+b,0);
+
+  new Chart(document.getElementById("donut"),{
+    type:'doughnut',
+    data:{
+      labels:['JV','Z1','Z2','Z3','Z4'],
+      datasets:[{
+        data:[
+          sum(jv),sum(z1),sum(z2),sum(z3),sum(z4)
+        ]
+      }]
+    }
+  });
+
+  // ===== Cumulative =====
+  let cum = [];
+  totalCol.reduce((a,b,i)=>{
+    cum[i]=a+b;
+    return cum[i];
+  },0);
+
+  new Chart(document.getElementById("cumulative"),{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'สะสม',
+        data:cum,
+        tension:0.3
+      }]
+    }
+  });
+
+});
+
+</script>
+</body>
+</html>
