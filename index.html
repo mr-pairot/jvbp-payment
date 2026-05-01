@@ -2,58 +2,46 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-
-  <title>Payment Control JVBP</title>
-  <link rel="shortcut icon" href="progress-graph-32.ico" />
+<title>Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-body {
-  font-family: 'Sarabun', sans-serif;
-  background:#0f172a;
-  color:white;
-  margin:0;
-}
-.container { padding:20px; }
+body {font-family:Sarabun;background:#0f172a;color:#fff;margin:0}
+.container{padding:20px}
 
-.kpi {
+.kpi{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:15px;
+  gap:15px
 }
-.card {
+.card{
   background:#1e293b;
   padding:15px;
-  border-radius:12px;
+  border-radius:12px
 }
-.value {
-  font-size:24px;
-  font-weight:bold;
-}
+.value{font-size:24px;font-weight:bold}
 
-canvas {
+canvas{
   background:#1e293b;
   margin-top:20px;
-  padding:10px;
   border-radius:12px;
+  padding:10px
 }
 
-table {
+table{
   width:100%;
   margin-top:20px;
   border-collapse:collapse;
-  background:#1e293b;
+  background:#1e293b
 }
-th,td {
+td,th{
   padding:8px;
   border-bottom:1px solid #334155;
-  text-align:center;
+  text-align:center
 }
-a {
-  color:#38bdf8;
-}
+a{color:#38bdf8}
 </style>
 </head>
 
@@ -67,10 +55,10 @@ a {
   <div class="card">จำนวนงวด<div id="count" class="value"></div></div>
 </div>
 
-<canvas id="lineChart"></canvas>
-<canvas id="stackChart"></canvas>
+<canvas id="line"></canvas>
+<canvas id="stack"></canvas>
 
-<table id="table"></table>
+<table id="tbl"></table>
 
 </div>
 
@@ -78,29 +66,28 @@ a {
 
 const URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS3vpwaPecNlZf2UYZMxWwhtvEli8fKMu8-Y0T7polbjWJzDanafkxBiEPY6MoYFXQDGCnEOlP_KCDP/pub?gid=1336324182&single=true&output=csv";
 
-// 🔥 แปลงตัวเลข (กัน comma + "-")
+// 🔥 กันพัง
 const toNumber = v => {
   if (!v || v === "-") return 0;
   return Number(v.replace(/,/g,"").trim());
 };
 
-Papa.parse(URL, {
-  download: true,
-  complete: function(res) {
+Papa.parse(URL,{
+  download:true,
+  complete:(res)=>{
 
-    const rows = res.data.slice(1).filter(r => r[0]);
+    const rows = res.data.slice(1).filter(r=>r[0]);
 
-    const labels = rows.map(r => r[0]);
+    const labels = rows.map(r=>r[0]);
 
-    // ✅ mapping ใหม่ถูกต้อง
-    const totalCol = rows.map(r => toNumber(r[12]));
-    const jv = rows.map(r => toNumber(r[14]));
-    const z1 = rows.map(r => toNumber(r[15]));
-    const z2 = rows.map(r => toNumber(r[16]));
-    const z3 = rows.map(r => toNumber(r[17]));
-    const z4 = rows.map(r => toNumber(r[18]));
-
-    const links = rows.map(r => r[19]);
+    // ✅ mapping ถูกต้อง
+    const totalCol = rows.map(r=>toNumber(r[11]));
+    const jv = rows.map(r=>toNumber(r[13]));
+    const z1 = rows.map(r=>toNumber(r[14]));
+    const z2 = rows.map(r=>toNumber(r[15]));
+    const z3 = rows.map(r=>toNumber(r[16]));
+    const z4 = rows.map(r=>toNumber(r[17]));
+    const links = rows.map(r=>r[18]);
 
     // ===== KPI =====
     const total = totalCol.reduce((a,b)=>a+b,0);
@@ -112,55 +99,55 @@ Papa.parse(URL, {
     document.getElementById("avg").innerText = avg.toFixed(0);
     document.getElementById("count").innerText = totalCol.length;
     document.getElementById("max").innerText =
-      labels[maxIndex] + " ("+maxVal.toLocaleString()+")";
+      labels[maxIndex]+" ("+maxVal.toLocaleString()+")";
 
     // ===== Line =====
-    new Chart(document.getElementById("lineChart"), {
+    new Chart(document.getElementById("line"),{
       type:'line',
       data:{
         labels,
         datasets:[{
           label:'ยอดรวม',
           data: totalCol,
-          tension:0.4
+          tension:0.4,
+          borderColor:"#3b82f6"
         }]
       }
     });
 
     // ===== Stack Zone =====
-    new Chart(document.getElementById("stackChart"), {
+    new Chart(document.getElementById("stack"),{
       type:'bar',
       data:{
         labels,
         datasets:[
-          {label:'JV', data:jv},
-          {label:'Zone1', data:z1},
-          {label:'Zone2', data:z2},
-          {label:'Zone3', data:z3},
-          {label:'Zone4', data:z4}
+          {label:'JV',data:jv},
+          {label:'Z1',data:z1},
+          {label:'Z2',data:z2},
+          {label:'Z3',data:z3},
+          {label:'Z4',data:z4}
         ]
       },
       options:{
-        scales:{x:{stacked:true}, y:{stacked:true}}
+        scales:{x:{stacked:true},y:{stacked:true}}
       }
     });
 
     // ===== Table + Click Link =====
     let html = `
-      <tr>
-        <th>งวด</th>
-        <th>รวม</th>
-        <th>JV</th>
-        <th>Z1</th>
-        <th>Z2</th>
-        <th>Z3</th>
-        <th>Z4</th>
-        <th>Link</th>
-      </tr>
-    `;
+    <tr>
+      <th>งวด</th>
+      <th>รวม</th>
+      <th>JV</th>
+      <th>Z1</th>
+      <th>Z2</th>
+      <th>Z3</th>
+      <th>Z4</th>
+      <th>Link</th>
+    </tr>`;
 
     rows.forEach((r,i)=>{
-      html += `
+      html+=`
       <tr>
         <td>${labels[i]}</td>
         <td>${totalCol[i].toLocaleString()}</td>
@@ -170,14 +157,14 @@ Papa.parse(URL, {
         <td>${z3[i].toLocaleString()}</td>
         <td>${z4[i].toLocaleString()}</td>
         <td>
-          ${links[i] 
-            ? `<a href="${links[i]}" target="_blank">เปิด</a>` 
+          ${links[i] && links[i] !== "-" 
+            ? `<a href="${links[i]}" target="_blank">เปิด</a>`
             : '-'}
         </td>
       </tr>`;
     });
 
-    document.getElementById("table").innerHTML = html;
+    document.getElementById("tbl").innerHTML = html;
 
   }
 });
